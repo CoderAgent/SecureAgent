@@ -3,6 +3,13 @@ import { JavascriptParser } from "./context/language/javascript-parser";
 import { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
 import { PythonParser } from "./context/language/python-parser";
 
+export const sayHello = (name: string): string => {
+  return `Hello, ${name}!`;
+};
+
+// Example usage
+console.log(sayHello("World"));
+
 
 export interface PRFile {
   sha: string;
