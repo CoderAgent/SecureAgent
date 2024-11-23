@@ -18,21 +18,7 @@ const reviewApp = new App({
 });
 
 const getChangesPerFile = async (payload: WebhookEventMap["pull_request"]) => {
-  try {
-    const octokit = await reviewApp.getInstallationOctokit(
-      payload.installation.id
-    );
-    const { data: files } = await octokit.rest.pulls.listFiles({
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-      pull_number: payload.pull_request.number,
-    });
-    console.dir({ files }, { depth: null });
-    return files;
-  } catch (exc) {
-    console.log("exc");
-    return [];
-  }
+  
 };
 
 // This adds an event handler that your code will call later. When this event handler is called, it will log the event to the console. Then, it will use GitHub's REST API to add a comment to the pull request that triggered the event.
