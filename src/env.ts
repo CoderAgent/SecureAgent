@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { createPrivateKey } from "crypto";
 import chalk from "chalk";
-
+import * as fs from 'fs';
 dotenv.config();
 
 export const env = {
@@ -25,7 +25,8 @@ for (const key in env) {
 }
 
 try {
-  createPrivateKey(env.GITHUB_PRIVATE_KEY);
+  const privateKey = fs.readFileSync(env.GITHUB_PRIVATE_KEY, 'utf-8');
+  createPrivateKey(privateKey);
 } catch (error) {
   console.log(
     chalk.red(

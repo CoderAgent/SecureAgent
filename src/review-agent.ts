@@ -26,6 +26,7 @@ import {
   getInlineFixPrompt,
 } from "./prompts/inline-prompt";
 import { getGitFile } from "./reviews";
+import { parsePatch } from "diff";
 
 export const reviewDiff = async (messages: ChatCompletionMessageParam[]) => {
   const message = await generateChatCompletion({
@@ -36,11 +37,28 @@ export const reviewDiff = async (messages: ChatCompletionMessageParam[]) => {
 
 export const reviewFiles = async (
   files: PRFile[],
-  patchBuilder: (file: PRFile) => string,
+  patchBuilder: (file: PRFile) => Promise<string>,
   convoBuilder: (diff: string) => ChatCompletionMessageParam[]
 ) => {
-  const patches = files.map((file) => patchBuilder(file));
-  const messages = convoBuilder(patches.join("\n"));
+  console.log("Processing files:", files.map(f => f.filename));
+  
+  const patches = await Promise.all(files.map(async (file) => {
+    const patch = await patchBuilder(file);
+    console.log(`Patch for ${file.filename}:`, patch || 'EMPTY');
+    if (!patch) {
+      console.warn(`Empty patch generated for file: ${file.filename}`);
+    }
+    return patch;
+  }));
+
+  const validPatches = patches.filter(Boolean);
+  if (validPatches.length === 0) {
+    console.error("No valid patches generated");
+    return "No changes to review";
+  }
+
+  console.log("Valid patches count:", validPatches.length);
+  const messages = convoBuilder(validPatches.join("\n"));
   const feedback = await reviewDiff(messages);
   return feedback;
 };
@@ -104,22 +122,24 @@ const groupFilesByExtension = (files: PRFile[]): Map<string, PRFile[]> => {
 };
 
 // all of the files here can be processed with the prompt at minimum
-const processWithinLimitFiles = (
+const processWithinLimitFiles = async (
   files: PRFile[],
-  patchBuilder: (file: PRFile) => string,
+  patchBuilder: (file: PRFile) => Promise<string>,
   convoBuilder: (diff: string) => ChatCompletionMessageParam[]
 ) => {
   const processGroups: PRFile[][] = [];
+  const patches = await Promise.all(files.map(patchBuilder));
   const convoWithinModelLimit = isConversationWithinLimit(
-    constructPrompt(files, patchBuilder, convoBuilder)
+    await constructPrompt(files, (f) => Promise.resolve(patches[files.indexOf(f)]), convoBuilder)
   );
 
   console.log(`Within model token limits: ${convoWithinModelLimit}`);
   if (!convoWithinModelLimit) {
     const grouped = groupFilesByExtension(files);
     for (const [extension, filesForExt] of grouped.entries()) {
+      const extPatches = await Promise.all(filesForExt.map(patchBuilder));
       const extGroupWithinModelLimit = isConversationWithinLimit(
-        constructPrompt(filesForExt, patchBuilder, convoBuilder)
+        await constructPrompt(filesForExt, (f) => Promise.resolve(extPatches[filesForExt.indexOf(f)]), convoBuilder)
       );
       if (extGroupWithinModelLimit) {
         processGroups.push(filesForExt);
@@ -130,9 +150,10 @@ const processWithinLimitFiles = (
         );
         let currentGroup: PRFile[] = [];
         filesForExt.sort((a, b) => a.patchTokenLength - b.patchTokenLength);
-        filesForExt.forEach((file) => {
+        for (const file of filesForExt) {
+          const patch = await patchBuilder(file);
           const isPotentialGroupWithinLimit = isConversationWithinLimit(
-            constructPrompt([...currentGroup, file], patchBuilder, convoBuilder)
+            await constructPrompt([...currentGroup, file], (f) => Promise.resolve(f === file ? patch : patches[files.indexOf(f)]), convoBuilder)
           );
           if (isPotentialGroupWithinLimit) {
             currentGroup.push(file);
@@ -140,7 +161,7 @@ const processWithinLimitFiles = (
             processGroups.push(currentGroup);
             currentGroup = [file];
           }
-        });
+        }
         if (currentGroup.length > 0) {
           processGroups.push(currentGroup);
         }
@@ -162,9 +183,9 @@ const stripRemovedLines = (originalFile: PRFile) => {
   return { ...originalFile, patch: strippedPatch };
 };
 
-const processOutsideLimitFiles = (
+const processOutsideLimitFiles = async (
   files: PRFile[],
-  patchBuilder: (file: PRFile) => string,
+  patchBuilder: (file: PRFile) => Promise<string>,
   convoBuilder: (diff: string) => ChatCompletionMessageParam[]
 ) => {
   const processGroups: PRFile[][] = [];
@@ -173,16 +194,16 @@ const processOutsideLimitFiles = (
   }
   files = files.map((file) => stripRemovedLines(file));
   const convoWithinModelLimit = isConversationWithinLimit(
-    constructPrompt(files, patchBuilder, convoBuilder)
+    await constructPrompt(files, patchBuilder, convoBuilder)
   );
   if (convoWithinModelLimit) {
     processGroups.push(files);
   } else {
     const exceedingLimits: PRFile[] = [];
     const withinLimits: PRFile[] = [];
-    files.forEach((file) => {
+    files.forEach(async (file) => {
       const isFileConvoWithinLimits = isConversationWithinLimit(
-        constructPrompt([file], patchBuilder, convoBuilder)
+        await constructPrompt([file], patchBuilder, convoBuilder)
       );
       if (isFileConvoWithinLimits) {
         withinLimits.push(file);
@@ -190,7 +211,7 @@ const processOutsideLimitFiles = (
         exceedingLimits.push(file);
       }
     });
-    const withinLimitsGroup = processWithinLimitFiles(
+    const withinLimitsGroup = await processWithinLimitFiles(
       withinLimits,
       patchBuilder,
       convoBuilder
@@ -339,34 +360,70 @@ export const reviewChanges = async (
   convoBuilder: (diff: string) => ChatCompletionMessageParam[],
   responseBuilder: (responses: string[]) => Promise<BuilderResponse>
 ) => {
-  const patchBuilder = buildPatchPrompt;
-  const filteredFiles = files.filter((file) => filterFile(file));
-  filteredFiles.map((file) => {
-    file.patchTokenLength = getTokenLength(patchBuilder(file));
+  console.log("Starting reviewChanges -----------------------------------------");
+  const patchBuilder = async (file: PRFile) => await buildPatchPrompt(file);
+
+  console.log("Initial files:", {
+    count: files.length,
+    files: files.map(f => ({
+      filename: f.filename,
+      status: f.status,
+      hasPath: !!f.patch
+    }))
   });
-  // further subdivide if necessary, maybe group files by common extension?
+
+  const filteredFiles = files.filter((file) => filterFile(file));
+  console.log("After filtering:", {
+    originalCount: files.length,
+    filteredCount: filteredFiles.length,
+    filtered: filteredFiles.map(f => f.filename)
+  });
+
+  // Log before token length calculation
+  console.log("Starting token length calculation for files:", 
+    filteredFiles.map(f => f.filename)
+  );
+
+  await Promise.all(filteredFiles.map(async (file) => {
+    const patch = await patchBuilder(file);
+    file.patchTokenLength = getTokenLength(patch);
+    console.log(`Token length for ${file.filename}: ${file.patchTokenLength}`);
+  }));
+
+  // Log before model limit separation
+  console.log("Starting model limit separation");
+
   const patchesWithinModelLimit: PRFile[] = [];
-  // these single file patches are larger than the full model context
   const patchesOutsideModelLimit: PRFile[] = [];
 
-  filteredFiles.forEach((file) => {
+  // Change forEach to for...of for proper async handling
+  for (const file of filteredFiles) {
+    const patch = await buildPatchPrompt(file);
     const patchWithPromptWithinLimit = isConversationWithinLimit(
-      constructPrompt([file], patchBuilder, convoBuilder)
+      await constructPrompt([file], () => Promise.resolve(patch), convoBuilder)
     );
+    
+    console.log(`File ${file.filename} within limit: ${patchWithPromptWithinLimit}`);
+    
     if (patchWithPromptWithinLimit) {
       patchesWithinModelLimit.push(file);
     } else {
       patchesOutsideModelLimit.push(file);
     }
+  }
+
+  console.log("Final separation results:", {
+    withinLimit: patchesWithinModelLimit.length,
+    outsideLimit: patchesOutsideModelLimit.length
   });
 
   console.log(`files within limits: ${patchesWithinModelLimit.length}`);
-  const withinLimitsPatchGroups = processWithinLimitFiles(
+  const withinLimitsPatchGroups = await processWithinLimitFiles(
     patchesWithinModelLimit,
     patchBuilder,
     convoBuilder
   );
-  const exceedingLimitsPatchGroups = processOutsideLimitFiles(
+  const exceedingLimitsPatchGroups = await processOutsideLimitFiles(
     patchesOutsideModelLimit,
     patchBuilder,
     convoBuilder
@@ -375,7 +432,7 @@ export const reviewChanges = async (
   console.log(
     `${patchesOutsideModelLimit.length} files outside limit, skipping them.`
   );
-
+  
   const groups = [...withinLimitsPatchGroups, ...exceedingLimitsPatchGroups];
 
   const feedbacks = await Promise.all(
@@ -435,19 +492,50 @@ export const generateInlineComments = async (
       throw new Error("No function call found");
     }
     const args = JSON.parse(function_call.arguments);
+    
+    // Parse the patch to get the hunks and extract the starting line number
+    const patches = parsePatch(file.patch);
+    if (patches.length === 0 || patches[0].hunks.length === 0) {
+      return null;
+    }
+    
+    const hunk = patches[0].hunks[0];
+    const diffStart = hunk.newStart;
+    
+    // Adjust the suggestion line numbers to be relative to the diff
+    const adjustedLineStart = diffStart + (args["lineStart"] % 1000); // Using modulo to keep within reasonable range
+    const adjustedLineEnd = adjustedLineStart + (args["lineEnd"] - args["lineStart"]);
+    
+    // Verify these lines are actually in the changed portion
+    const changedLines = hunk.lines
+      .map((line, index) => ({ line, index: diffStart + index }))
+      .filter(({ line }) => line.startsWith('+'));
+    
+    const isInChangedPortion = changedLines.some(
+      ({ index }) => index >= adjustedLineStart && index <= adjustedLineEnd
+    );
+    
+    if (!isInChangedPortion) {
+      console.log(`Skipping comment for ${file.filename} - adjusted lines ${adjustedLineStart}-${adjustedLineEnd} not in changed portion`);
+      return null;
+    }
+
     const initialCode = String.raw`${args["code"]}`;
     const indentedCode = indentCodeFix(
       file.current_contents,
       initialCode,
-      args["lineStart"]
+      adjustedLineStart
     );
+    
     const codeFix = {
       file: suggestion.filename,
-      line_start: args["lineStart"],
-      line_end: args["lineEnd"],
+      line_start: adjustedLineStart,
+      line_end: adjustedLineEnd,
       correction: indentedCode,
       comment: args["comment"],
+      diff_hunk: hunk.lines.join('\n')
     };
+
     if (isCodeSuggestionNew(file.current_contents, codeFix)) {
       return codeFix;
     }

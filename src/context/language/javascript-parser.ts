@@ -21,11 +21,11 @@ const processNode = (
 };
 
 export class JavascriptParser implements AbstractParser {
-  findEnclosingContext(
+  async findEnclosingContext(
     file: string,
     lineStart: number,
     lineEnd: number
-  ): EnclosingContext {
+  ): Promise<EnclosingContext> {
     const ast = parser.parse(file, {
       sourceType: "module",
       plugins: ["jsx", "typescript"], // To allow JSX and TypeScript
@@ -57,7 +57,7 @@ export class JavascriptParser implements AbstractParser {
     } as EnclosingContext;
   }
 
-  dryRun(file: string): { valid: boolean; error: string } {
+  async dryRun(file: string): Promise<{ valid: boolean; error: string }> {
     try {
       const ast = parser.parse(file, {
         sourceType: "module",
