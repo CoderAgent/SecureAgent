@@ -21,17 +21,19 @@ const processNode = (
 };
 
 export class JavascriptParser implements AbstractParser {
-  findEnclosingContext(
+  async findEnclosingContext(
     file: string,
     lineStart: number,
     lineEnd: number
-  ): EnclosingContext {
-    const ast = parser.parse(file, {
-      sourceType: "module",
-      plugins: ["jsx", "typescript"], // To allow JSX and TypeScript
-    });
-    let largestEnclosingContext: Node = null;
-    let largestSize = 0;
+  ): Promise<EnclosingContext> {
+    return new Promise ((resolve) => {
+      const ast = parser.parse(file, {
+        sourceType: "module",
+        plugins: ["jsx", "typescript"], // To allow JSX and TypeScript
+      });
+
+      let largestEnclosingContext: Node = null;
+      let largestSize = 0;
     traverse(ast, {
       Function(path) {
         ({ largestSize, largestEnclosingContext } = processNode(
@@ -52,26 +54,30 @@ export class JavascriptParser implements AbstractParser {
         ));
       },
     });
-    return {
+    resolve({
       enclosingContext: largestEnclosingContext,
-    } as EnclosingContext;
+    } as EnclosingContext);
+    });
   }
+    
 
-  dryRun(file: string): { valid: boolean; error: string } {
-    try {
-      const ast = parser.parse(file, {
-        sourceType: "module",
-        plugins: ["jsx", "typescript"], // To allow JSX and TypeScript
-      });
-      return {
+  async dryRun(file: string): Promise<{ valid: boolean; error: string }> {
+    return new Promise((resolve) => {
+      try {
+        const ast = parser.parse(file, {
+          sourceType: "module",
+          plugins: ["jsx", "typescript"], // To allow JSX and TypeScript
+        });
+        resolve({
         valid: true,
         error: "",
-      };
+        });
     } catch (exc) {
-      return {
+      resolve({
         valid: false,
         error: exc,
-      };
+      });
     }
-  }
+  });
+}
 }

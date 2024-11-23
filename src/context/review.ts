@@ -205,7 +205,7 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
     });
   });
 
-  hunks.forEach((hunk, idx) => {
+  hunks.forEach(async (hunk, idx) => {
     try {
       const trimmedHunk = trimHunk(hunk);
       const insertions = hunk.lines.filter((line) =>
@@ -213,11 +213,11 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
       ).length;
       const lineStart = trimmedHunk.newStart;
       const lineEnd = lineStart + insertions;
-      const largestEnclosingFunction = parser.findEnclosingContext(
+      const largestEnclosingFunction = (await parser.findEnclosingContext(
         updatedFile,
         lineStart,
         lineEnd
-      ).enclosingContext;
+      )).enclosingContext;
 
       if (largestEnclosingFunction) {
         const enclosingRangeKey = `${largestEnclosingFunction.loc.start.line} -> ${largestEnclosingFunction.loc.end.line}`;
