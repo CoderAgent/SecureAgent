@@ -71,6 +71,17 @@ npm run start
 ```
 
 9. Create a pull request on one of your repositories and watch the review agent submit a review!
-  - Make sure to create the pull request on a repository that your GitHub app has access to.
-  - Make sure the pull request has at least one changed file that is supported by the review agent. The following file extensions are ignored: ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mp3", ".md", ".json", ".env", ".toml", and ".svg".
-  - You will have to create new pull requests each time to test the review agent, as it will not work on the same pull request twice.
+
+- Make sure to create the pull request on a repository that your GitHub app has access to.
+- Make sure the pull request has at least one changed file that is supported by the review agent. The following file extensions are ignored: ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mp3", ".md", ".json", ".env", ".toml", and ".svg".
+- You will have to create new pull requests each time to test the review agent, as it will not work on the same pull request twice.
+
+## Resources
+
+- [Project Diagram](https://excalidraw.com/#json=Tyo1OFlu5AY5b7AiZyPJw,jIJfR3fdbbqsxecfalkkEw)
+- [Abstract Syntax Trees (AST)](https://earthly.dev/blog/python-ast/)
+- [ngrok](https://dashboard.ngrok.com/get-started/setup/windows)
+- [Code Review Automation With LLMs](https://www.sciencedirect.com/science/article/pii/S0950584924001289)
+- [AI-powered Code Review](https://arxiv.org/pdf/2404.18496)
+
+_Used NotebookLM to create highlight podcasts_
