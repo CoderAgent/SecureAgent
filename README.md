@@ -1,6 +1,5 @@
 # AI Review Agent
 
-This is a GitHub App that reviews pull requests and submits reviews with AI.
 
 ## Setup
 
