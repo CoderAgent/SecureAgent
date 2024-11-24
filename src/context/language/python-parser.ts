@@ -33,6 +33,10 @@ export class PythonParser implements AbstractParser {
 
     // Custom listener class to traverse the AST
     class CustomListener {
+      // What does the enterEveryRule method do?
+      // It makes the listener visit every rule node in the AST
+      // and process each node to determine the largest enclosing context
+      // The ctx parameter is the context object for the rule node
       enterEveryRule(ctx: any): void {
         // Process each rule node
         ({ largestSize, largestEnclosingContext } = processNode(
@@ -68,3 +72,11 @@ export class PythonParser implements AbstractParser {
     }
   }
 }
+/*
+    AST (Abstract Syntax Tree) is a tree representation of the source code
+    It represents the structure of the code in a hierarchical manner
+    The AST is used to analyze and manipulate the code programmatically
+    The Python3Parser class is used to parse Python code and generate the AST
+    --> As the code is parsed, the code is analyzed and broken down into parts
+        --> These parts are represented as nodes in the AST
+  */
