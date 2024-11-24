@@ -107,6 +107,7 @@ const EXTENSIONS_TO_PARSERS: Map<string, AbstractParser> = new Map([
   ["tsx", new JavascriptParser()],
   ["js", new JavascriptParser()],
   ["jsx", new JavascriptParser()],
+  ["py", new JavascriptParser()],
 ]);
 
 export const getParserForExtension = (filename: string) => {

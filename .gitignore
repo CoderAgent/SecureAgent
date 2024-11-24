@@ -10,3 +10,5 @@ src/test.ts
 src/test-files.ts
 src/tests
 src/scripts
+.vscode/
+.idx/
