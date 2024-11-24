@@ -17,7 +17,7 @@ export const INLINE_FIX_PROMPT = `In this task, you are provided with a code sug
 
 The 'comment' field contains specific code modification instructions. Based on these instructions, you're required to formulate a precise code fix. Bear in mind that the fix must include only the lines between the starting line (linestart) and ending line (lineend) where the changes are applied.
 
-The adjusted code doesn't necessarily need to be standalone valid code, but when incorporated into the corresponding file, it must result in valid, functional code, without errors. Ensure to include only the specific lines affected by the modifications. Avoid including placeholders such as 'rest of code...'
+The modified code does not need to be standalone valid, but when integrated into the file, it should be error-free and functional. Include only the lines directly affected by the changes. Avoid using placeholders like 'rest of code...'
 
 Please interpret the given directions and apply the necessary changes to the provided suggestion and file content. Make the modifications unambiguous and appropriate for utilizing in an inline suggestion on GitHub.`;
 
