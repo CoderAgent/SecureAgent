@@ -5,6 +5,7 @@
   "license": "ISC",
   "scripts": {
     "start": "tsx src/app.ts"
+    "test": "jest"
   },
   "dependencies": {
     "@babel/parser": "^7.23.0",
