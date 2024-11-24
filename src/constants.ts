@@ -89,8 +89,11 @@ export const processGitFilepath = (filepath: string) => {
   return filepath.startsWith("/") ? filepath.slice(1) : filepath;
 };
 
+// Updated EnclosingContext interface
 export interface EnclosingContext {
-  enclosingContext: Node | null;
+  enclosingContext: Node | null;   // Existing property
+  type: "function" | "class";      // Added property
+  name: string;                    // Added property
 }
 
 export interface AbstractParser {
