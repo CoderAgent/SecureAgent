@@ -41,6 +41,7 @@ The review should focus on new code added in the PR (lines starting with '+'), a
 
 - ONLY PROVIDE CODE SUGGESTIONS
 - Focus on important suggestions like fixing code problems, improving performance, improving security, improving readability
+- Specifically, could make suggestions on function modulization or code logic on top of performance, readability, and security
 - Avoid making suggestions that have already been implemented in the PR code. For example, if you want to add logs, or change a variable to const, or anything else, make sure it isn't already in the PR code.
 - Don't suggest adding docstring, type hints, or comments.
 - Suggestions should focus on improving the new code added in the PR (lines starting with '+')
