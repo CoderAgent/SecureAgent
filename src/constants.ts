@@ -1,9 +1,8 @@
 import { Node } from "@babel/traverse";
 import { JavascriptParser } from "./context/language/javascript-parser";
 import { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
-import Parser from "tree-sitter";
 import { PythonParser } from "./context/language/python-parser";
-
+import Parser = require("tree-sitter")
 export interface PRFile {
   sha: string;
   filename: string;

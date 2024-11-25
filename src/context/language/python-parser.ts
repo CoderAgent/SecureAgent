@@ -1,20 +1,19 @@
 import { AbstractParser, EnclosingContext } from "../../constants";
-import Parser from "tree-sitter";
-import Python from "tree-sitter-python";
+import * as ast from "python-ast"; // Python AST parsing library
 
-const parser = new Parser();
-parser.setLanguage(Python);
-
+/**
+ * Processes a Python AST node to determine if it is the largest enclosing context.
+ */
 const processNode = (
-  node: Parser.SyntaxNode,
+  node: any,
   lineStart: number,
   lineEnd: number,
   largestSize: number,
-  largestEnclosingContext: Parser.SyntaxNode | null
+  largestEnclosingContext: any
 ) => {
-  const { startPosition, endPosition } = node;
-  if (startPosition.row <= lineStart && lineEnd <= endPosition.row) {
-    const size = endPosition.row - startPosition.row;
+  const { start, end } = node.loc;
+  if (start.line <= lineStart && lineEnd <= end.line) {
+    const size = end.line - start.line;
     if (size > largestSize) {
       largestSize = size;
       largestEnclosingContext = node;
@@ -24,51 +23,53 @@ const processNode = (
 };
 
 export class PythonParser implements AbstractParser {
+  /**
+   * Finds the largest enclosing context for the specified line range.
+   */
   findEnclosingContext(
     file: string,
     lineStart: number,
     lineEnd: number
   ): EnclosingContext {
-    let largestSize = 0;
-    let largestEnclosingContext: Parser.SyntaxNode | null = null;
+    try {
+      const parsed = ast.parse(file); // Parse the Python file into an AST
+      let largestEnclosingContext: any = null;
+      let largestSize = 0;
 
-    const ast = parser.parse(file);
-    const rootNode = ast.rootNode;
-
-    const traverse = (node: Parser.SyntaxNode) => {
-      if (node.type === "function_definition") {
-        const result = processNode(
+      // Recursive traversal function to check each node
+      const traverseNode = (node: any) => {
+        ({ largestSize, largestEnclosingContext } = processNode(
           node,
           lineStart,
           lineEnd,
           largestSize,
           largestEnclosingContext
-        );
-        largestSize = result.largestSize;
-        largestEnclosingContext = result.largestEnclosingContext;
-      }
-
-      for (let i = 0; i < node.childCount; i++) {
-        const child = node.child(i);
-        if (child?.childCount > 0) {
-          traverse(child);
+        ));
+        if (node.body) {
+          node.body.forEach(traverseNode); // Recursively process child nodes
         }
-      }
-    };
+      };
 
-    traverse(rootNode);
+      traverseNode(parsed); // Start traversing from the root of the AST
 
-    return {
-      enclosingContext: largestEnclosingContext,
-    } as EnclosingContext;
+      return {
+        enclosingContext: largestEnclosingContext,
+      } as EnclosingContext;
+    } catch (error) {
+      console.error("Error parsing Python file:", error);
+      return null;
+    }
   }
 
+  /**
+   * Performs a dry run to validate the Python file syntax.
+   */
   dryRun(file: string): { valid: boolean; error: string } {
     try {
-      parser.parse(file);
+      ast.parse(file); // Try parsing the file
       return { valid: true, error: "" };
-    } catch (exc) {
-      return { valid: false, error: exc.message };
+    } catch (error) {
+      return { valid: false, error: error.message };
     }
   }
 }
