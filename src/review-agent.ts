@@ -26,6 +26,7 @@ import {
   getInlineFixPrompt,
 } from "./prompts/inline-prompt";
 import { getGitFile } from "./reviews";
+import { parsePatch } from "diff";
 
 export const reviewDiff = async (messages: ChatCompletionMessageParam[]) => {
   const message = await generateChatCompletion({
@@ -435,18 +436,45 @@ export const generateInlineComments = async (
       throw new Error("No function call found");
     }
     const args = JSON.parse(function_call.arguments);
+    // Parse the patch to get the hunks and extract the starting line number
+    const patches = parsePatch(file.patch);
+    if (patches.length === 0 || patches[0].hunks.length === 0) {
+      return null;
+    }
+    const hunk = patches[0].hunks[0];
+    const diffStart = hunk.newStart;
+    console.log('code: ', args['code'])
+    console.log('comment: ', args['comment'])
+    console.log('diffStart', diffStart)
+    console.log('lineStart', args['lineStart'])
+    console.log('lineEnd', args['lineEnd'])
+    // Adjust the suggestion line numbers to be relative to the diff
+    const adjustedLineStart = diffStart + (args["lineStart"] % 1000); // Using modulo to keep within reasonable range
+    const adjustedLineEnd = adjustedLineStart + (args["lineEnd"] - args["lineStart"]);
+    // Verify these lines are actually in the changed portion
+    const changedLines = hunk.lines
+      .map((line, index) => ({ line, index: diffStart + index }))
+      .filter(({ line }) => line.startsWith('+'));
+    const isInChangedPortion = changedLines.some(
+      ({ index }) => index >= adjustedLineStart && index <= adjustedLineEnd
+    );
+    if (!isInChangedPortion) {
+      console.log(`Skipping comment for ${file.filename} - adjusted lines ${adjustedLineStart}-${adjustedLineEnd} not in changed portion`);
+      return null;
+    }
     const initialCode = String.raw`${args["code"]}`;
     const indentedCode = indentCodeFix(
       file.current_contents,
       initialCode,
-      args["lineStart"]
+      adjustedLineStart
     );
     const codeFix = {
       file: suggestion.filename,
-      line_start: args["lineStart"],
-      line_end: args["lineEnd"],
+      line_start: adjustedLineStart,
+      line_end: adjustedLineEnd,
       correction: indentedCode,
       comment: args["comment"],
+      diff_hunk: hunk.lines.join('\n')
     };
     if (isCodeSuggestionNew(file.current_contents, codeFix)) {
       return codeFix;
@@ -457,7 +485,6 @@ export const generateInlineComments = async (
     return null;
   }
 };
-
 const preprocessFile = async (
   octokit: Octokit,
   payload: WebhookEventMap["pull_request"],
@@ -561,6 +588,7 @@ export const processPullRequest = async (
     const filteredInlineComments = inlineComments.filter(
       (comment) => comment !== null
     );
+    console.log('suggestions', filteredInlineComments)
     return {
       review: reviewComments,
       suggestions: filteredInlineComments,

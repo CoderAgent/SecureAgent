@@ -37,11 +37,15 @@ const postInlineComment = async (
   suggestion: CodeSuggestion
 ) => {
   try {
+    console.log('Code Suggestion:', suggestion)
     const line = suggestion.line_end;
+    console.log('line: ', line)
     let startLine = null;
+    console.log('line.start: ', suggestion.line_start )
     if (suggestion.line_end != suggestion.line_start) {
       startLine = suggestion.line_start;
     }
+    console.log('startLine: ', startLine)
     const suggestionBody = `${suggestion.comment}\n\`\`\`suggestion\n${suggestion.correction}`;
 
     await octokit.request(
