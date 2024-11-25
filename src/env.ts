@@ -3,10 +3,14 @@ import { createPrivateKey } from "crypto";
 import chalk from "chalk";
 
 dotenv.config();
+console.log("GITHUB_PRIVATE_KEY:", process.env.GITHUB_PRIVATE_KEY);
+
+const privateKeyBase64 = process.env.GITHUB_PRIVATE_KEY;
+const privateKey = Buffer.from(privateKeyBase64, "base64").toString("utf-8");
 
 export const env = {
   GITHUB_APP_ID: process.env.GITHUB_APP_ID,
-  GITHUB_PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY,
+  GITHUB_PRIVATE_KEY: privateKey,
   GITHUB_WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET,
   GROQ_API_KEY: process.env.GROQ_API_KEY,
 } as const;
