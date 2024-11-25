@@ -1,8 +1,10 @@
 import {
   AbstractParser,
+  EnclosingContext,
   PRFile,
   PatchInfo,
   getParserForExtension,
+  isBabelNode,
 } from "../constants";
 import * as diff from "diff";
 import { JavascriptParser } from "./language/javascript-parser";

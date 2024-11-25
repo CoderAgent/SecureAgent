@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { createNodeMiddleware } from "@octokit/webhooks";
-import { WebhookEventMap } from "@octokit/webhooks-definitions/schema";
+
+import { WebhookEventMap } from "@octokit/webhooks-types";
 import * as http from "http";
 import { App } from "octokit";
 import { Review } from "./constants";
