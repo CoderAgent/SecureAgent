@@ -314,6 +314,7 @@ const functionContextPatchStrategy = (
   return res;
 };
 
+
 export const smarterContextPatchStrategy = (file: PRFile) => {
   const parser: AbstractParser = getParserForExtension(file.filename);
   if (parser != null) {
