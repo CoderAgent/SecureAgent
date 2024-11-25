@@ -1,3 +1,4 @@
+
 import { Octokit } from "@octokit/rest";
 import { createNodeMiddleware } from "@octokit/webhooks";
 import { WebhookEventMap } from "@octokit/webhooks-definitions/schema";
@@ -46,8 +47,6 @@ async function handlePullRequestOpened({
   console.log(
     `Received a pull request event for #${payload.pull_request.number}`
   );
-  // const reposWithInlineEnabled = new Set<number>([601904706, 701925328]);
-  // const canInlineSuggest = reposWithInlineEnabled.has(payload.repository.id);
   try {
     console.log("pr info", {
       id: payload.repository.id,
@@ -69,7 +68,6 @@ async function handlePullRequestOpened({
 }
 
 // This sets up a webhook event listener. When your app receives a webhook event from GitHub with a `X-GitHub-Event` header value of `pull_request` and an `action` payload value of `opened`, it calls the `handlePullRequestOpened` event handler that is defined above.
-//@ts-ignore
 reviewApp.webhooks.on("pull_request.opened", handlePullRequestOpened);
 
 const port = process.env.PORT || 3000;
