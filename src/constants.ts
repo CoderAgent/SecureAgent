@@ -90,9 +90,21 @@ export const processGitFilepath = (filepath: string) => {
 };
 
 export interface EnclosingContext {
-  enclosingContext: Node | null;
+  enclosingContext: Node | TreeSitterNode | null;
 }
-
+export interface TreeSitterNode {
+  type: string;
+  loc: {
+    start: {
+      line: number;
+      column: number;
+    };
+    end: {
+      line: number;
+      column: number;
+    };
+  };
+}
 export interface AbstractParser {
   findEnclosingContext(
     file: string,
