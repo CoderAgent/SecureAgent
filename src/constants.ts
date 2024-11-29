@@ -1,8 +1,7 @@
 import { Node } from "@babel/traverse";
 import { JavascriptParser } from "./context/language/javascript-parser";
 import { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
-import { PythonParser } from "./context/language/python-parser";
-import Parser = require("tree-sitter")
+
 export interface PRFile {
   sha: string;
   filename: string;
@@ -90,16 +89,8 @@ export const processGitFilepath = (filepath: string) => {
   return filepath.startsWith("/") ? filepath.slice(1) : filepath;
 };
 
-export const isBabelNode = (node: Node | Parser.SyntaxNode): node is Node  =>{
-  if (node === null) {
-    return false;
-  }
-  
-  return (node as Parser.SyntaxNode).childCount === undefined;
-}
-
 export interface EnclosingContext {
-  enclosingContext: Node | Parser.SyntaxNode | null;
+  enclosingContext: Node | null;
 }
 
 export interface AbstractParser {
@@ -116,7 +107,6 @@ const EXTENSIONS_TO_PARSERS: Map<string, AbstractParser> = new Map([
   ["tsx", new JavascriptParser()],
   ["js", new JavascriptParser()],
   ["jsx", new JavascriptParser()],
-  ["py", new PythonParser]
 ]);
 
 export const getParserForExtension = (filename: string) => {

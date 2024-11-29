@@ -1,14 +1,11 @@
 import {
   AbstractParser,
-  EnclosingContext,
   PRFile,
   PatchInfo,
   getParserForExtension,
-  isBabelNode,
 } from "../constants";
 import * as diff from "diff";
 import { JavascriptParser } from "./language/javascript-parser";
-import { PythonParser } from "./language/python-parser";
 import { Node } from "@babel/traverse";
 
 const expandHunk = (
@@ -110,20 +107,13 @@ const trimHunk = (hunk: diff.Hunk): diff.Hunk => {
 
 const buildingScopeString = (
   currentFile: string,
-  scope: EnclosingContext,
+  scope: Node,
   hunk: diff.Hunk
 ) => {
   const res: string[] = [];
   const trimmedHunk = trimHunk(hunk);
-  let functionStartLine = 0;
-  let functionEndLine = 0;
-  if (isBabelNode(scope.enclosingContext)) {
-    functionStartLine = scope.enclosingContext.loc.start.line;
-    functionEndLine = scope.enclosingContext.loc.end.line;
-  } else {
-    functionStartLine = scope.enclosingContext.startPosition.row;
-    functionEndLine = scope.enclosingContext.endPosition.row;
-  }
+  const functionStartLine = scope.loc.start.line;
+  const functionEndLine = scope.loc.end.line;
   const updatedFileLines = currentFile.split("\n");
   // Extract the lines of the function
   const functionContext = updatedFileLines.slice(
@@ -206,7 +196,7 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
   const hunks: diff.Hunk[] = [];
   const order: number[] = [];
   const scopeRangeHunkMap = new Map<string, diff.Hunk[]>();
-  const scopeRangeNodeMap = new Map<string, EnclosingContext>();
+  const scopeRangeNodeMap = new Map<string, Node>();
   const expandStrategy: diff.Hunk[] = [];
 
   patches.forEach((p) => {
@@ -215,7 +205,6 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
     });
   });
 
-  console.info("processing hunks");
   hunks.forEach((hunk, idx) => {
     try {
       const trimmedHunk = trimHunk(hunk);
@@ -224,30 +213,14 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
       ).length;
       const lineStart = trimmedHunk.newStart;
       const lineEnd = lineStart + insertions;
-      console.info(`searching for context for range: ${lineStart}-${lineEnd}`);
       const largestEnclosingFunction = parser.findEnclosingContext(
         updatedFile,
         lineStart,
         lineEnd
-      );
-      const node = largestEnclosingFunction.enclosingContext;
-      
-      if (isBabelNode(node)) {
-        console.log("Babel Node");
-      }
-      else {
-        console.log("Python Node")
-      }
+      ).enclosingContext;
 
       if (largestEnclosingFunction) {
-        let enclosingRangeKey = "";
-        if (isBabelNode(node)) {
-          enclosingRangeKey = `${node.loc.start.line} -> ${node.loc.end.line}`;
-          console.log('enclosed context rarnge for Babel Node: ', enclosingRangeKey)
-        } else {
-          enclosingRangeKey = `${node.startPosition.row} -> ${node.endPosition.row}`;
-          console.log('enclosed context rarnge for Python Node: ', enclosingRangeKey)
-        }
+        const enclosingRangeKey = `${largestEnclosingFunction.loc.start.line} -> ${largestEnclosingFunction.loc.end.line}`;
         let existingHunks = scopeRangeHunkMap.get(enclosingRangeKey) || [];
         existingHunks.push(hunk);
         scopeRangeHunkMap.set(enclosingRangeKey, existingHunks);
@@ -273,23 +246,12 @@ const diffContextPerHunk = (file: PRFile, parser: AbstractParser) => {
 
   const contexts: string[] = [];
   scopeStategy.forEach(([rangeKey, hunk]) => {
-    const enclosingContext = scopeRangeNodeMap.get(rangeKey);
-    const node = enclosingContext.enclosingContext;
-    if (node && isBabelNode(node)) {
-      const context = buildingScopeString(
-        updatedFile,
-        enclosingContext,
-        hunk
-      ).join("\n");
-      contexts.push(context);
-    } else if (node) {
-      const context = buildingScopeString(
-        updatedFile,
-        enclosingContext,
-        hunk
-      ).join("\n");
-      contexts.push(context);
-    }
+    const context = buildingScopeString(
+      updatedFile,
+      scopeRangeNodeMap.get(rangeKey),
+      hunk
+    ).join("\n");
+    contexts.push(context);
   });
   expandStrategy.forEach((hunk) => {
     const context = expandHunk(file.old_contents, hunk);
@@ -316,15 +278,8 @@ const functionContextPatchStrategy = (
 export const smarterContextPatchStrategy = (file: PRFile) => {
   const parser: AbstractParser = getParserForExtension(file.filename);
   if (parser != null) {
-    if (parser instanceof PythonParser) {
-      console.log('Using PythonParser')
-    }
-    else if (parser instanceof JavascriptParser) {
-      console.log('Using JavaScriptParser')
-    }
     return functionContextPatchStrategy(file, parser);
   } else {
-    console.info("Using basic parser");
     return expandedPatchStrategy(file);
   }
 };
