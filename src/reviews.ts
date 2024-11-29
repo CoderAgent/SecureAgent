@@ -120,13 +120,22 @@ export const getGitFile = async (
         },
       }
     );
-    //@ts-ignore
-    const decodedContent = Buffer.from(
-      response.data.content,
-      "base64"
-    ).toString("utf8");
-    //@ts-ignore
-    return { content: decodedContent, sha: response.data.sha };
+
+    // Narrow the type to ensure it is a file
+    if (Array.isArray(response.data)) {
+      // It's a directory, return null
+      return { content: null, sha: null };
+    } else if (response.data.type === "file") {
+      // Decode file content
+      const decodedContent = Buffer.from(
+        response.data.content as string,
+        "base64"
+      ).toString("utf8");
+      return { content: decodedContent, sha: response.data.sha };
+    } else {
+      // It's a symlink or submodule
+      return { content: null, sha: null };
+    }
   } catch (exc) {
     if (exc.status === 404) {
       return { content: null, sha: null };

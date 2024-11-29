@@ -1,7 +1,7 @@
 import { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
 import { PRSuggestion } from "../constants";
 
-export const INLINE_FIX_PROMPT = `In this task, you are provided with a code suggestion in XML format, along with the corresponding file content. Your task is to radiate from this suggestion and draft a precise code fix. Here's how your input will look:
+export const  INLINE_FIX_PROMPT = `In this task, you are provided with a code suggestion in XML format, along with the corresponding file content. Your task is to radiate from this suggestion and draft a precise code fix. Here's how your input will look:
 
 \`\`\`xml
   <suggestion>
