@@ -3,7 +3,7 @@
 This is a GitHub App that reviews pull requests and submits reviews with AI.
 
 ## Architecture Diagram
-![Architecture Diagram of Secure Agent PR Reviewer](/architecture-diagram.png)
+![Architecture Diagram of Secure Agent PR Reviewer](Architecture-Diagram.png)
 
 ## Setup
 
