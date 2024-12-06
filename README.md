@@ -2,6 +2,9 @@
 
 This is a GitHub App that reviews pull requests and submits reviews with AI.
 
+## Architecture Diagram
+![Architecture Diagram of Secure Agent PR Reviewer](architecture-diagram.png)
+
 ## Setup
 
 1. Download NGROK [here](https://download.ngrok.com/). This will be used to create a secure tunnel to your local server.
