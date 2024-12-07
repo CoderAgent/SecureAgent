@@ -2,6 +2,9 @@
 
 This is a GitHub App that reviews pull requests and submits reviews with AI.
 
+## Architecture Diagram
+![Architecture Diagram of Secure Agent PR Reviewer](Architecture-Diagram.png)
+
 ## Setup
 
 1. Download NGROK [here](https://download.ngrok.com/). This will be used to create a secure tunnel to your local server.
@@ -70,7 +73,15 @@ Make sure your GITHUB_PRIVATE_KEY is formatted correctly, with the "--- BEGIN RS
 npm run start
 ```
 
-9. Create a pull request on one of your repositories and watch the review agent submit a review!
+9. In another IDE window open another project, In the terminal, we'll create another branch and make changes to the project.:
+```
+git checkout -b <branch-name>
+git add .
+git commit -m "..."
+git push origin <branch-name>
+```
+
+10. Create a pull request on one of your repositories and watch the review agent submit a review!
   - Make sure to create the pull request on a repository that your GitHub app has access to.
   - Make sure the pull request has at least one changed file that is supported by the review agent. The following file extensions are ignored: ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mp3", ".md", ".json", ".env", ".toml", and ".svg".
   - You will have to create new pull requests each time to test the review agent, as it will not work on the same pull request twice.
